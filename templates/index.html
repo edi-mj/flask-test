@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Visualisasi Fuzzy Logic dengan Chart.js</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      body {
+        font-family: sans-serif;
+        background-color: #f4f4f9;
+        color: #333;
+      }
+      h1 {
+        text-align: center;
+        color: #444;
+      }
+      .chart-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 20px;
+        padding: 20px;
+      }
+      .chart-container {
+        background-color: #fff;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Visualisasi Fungsi Keanggotaan Fuzzy</h1>
+
+    <div class="chart-grid">
+      {% for var_name in variable_names %}
+      <div class="chart-container">
+        <canvas id="chart-{{ var_name }}"></canvas>
+      </div>
+      {% endfor %}
+    </div>
+
+    <script>
+      // Fungsi untuk membuat plot
+      async function createFuzzyChart(variableName) {
+          const ctx = document.getElementById(`chart-${variableName}`).getContext('2d');
+
+          // Ambil data dari API Flask kita
+          const response = await fetch(`/api/data/${variableName}`);
+          const data = await response.json();
+
+          new Chart(ctx, {
+              type: 'line', // Semua plot adalah tipe garis
+              data: {
+                  labels: data.labels,
+                  datasets: data.datasets
+              },
+              options: {
+                  responsive: true,
+                  plugins: {
+                      title: {
+                          display: true,
+                          text: data.title, // Judul dinamis dari API
+                          font: { size: 16 }
+                      },
+                      legend: {
+                          position: 'top',
+                      }
+                  },
+                  scales: {
+                      y: {
+                          beginAtZero: true,
+                          max: 1, // Sumbu Y dari 0 sampai 1
+                          title: {
+                              display: true,
+                              text: 'Derajat Keanggotaan'
+                          }
+                      },
+                      x: {
+                           title: {
+                              display: true,
+                              text: 'Nilai Universe'
+                          }
+                      }
+                  }
+              }
+          });
+      }
+
+      // Tunggu sampai semua konten halaman dimuat
+      document.addEventListener('DOMContentLoaded', () => {
+          // Ambil nama variabel dari template Jinja2 dan panggil fungsi createFuzzyChart untuk masing-masing
+          const variables = {{ variable_names | tojson }};
+          variables.forEach(varName => {
+              createFuzzyChart(varName);
+          });
+      });
+    </script>
+  </body>
+</html>
