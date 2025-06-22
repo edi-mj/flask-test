@@ -1,20 +1,65 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Visualisasi Fuzzy Logic dengan Chart.js</title>
+    <title>Prediksi Fuzzy - Biaya Listrik</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
       body {
         font-family: sans-serif;
         background-color: #f4f4f9;
         color: #333;
+        margin: 0;
+        padding: 0;
       }
-      h1 {
+      header {
+        background-color: #0052cc;
+        color: #fff;
+        padding: 20px;
         text-align: center;
-        color: #444;
       }
+      form {
+        max-width: 500px;
+        margin: 20px auto;
+        background: #fff;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      }
+      form label {
+        display: block;
+        margin-top: 10px;
+        font-weight: 600;
+      }
+      form input {
+        width: 97%;
+        padding: 10px;
+        margin-top: 5px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+      }
+      form button {
+        margin-top: 20px;
+        width: 100%;
+        padding: 12px;
+        background-color: #0052cc;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      form button:hover {
+        background-color: #003f99;
+      }
+      .result {
+        text-align: center;
+        font-size: 20px;
+        margin-top: 20px;
+        font-weight: bold;
+      }
+
       .chart-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
@@ -30,7 +75,31 @@
     </style>
   </head>
   <body>
-    <h1>Visualisasi Fungsi Keanggotaan Fuzzy</h1>
+    <header>
+      <h1>Prediksi Biaya Listrik dengan Fuzzy Mamdani</h1>
+    </header>
+
+    <form method="POST">
+      <label for="luas">Luas Rumah (m²)</label>
+      <input type="number" name="luas" id="luas" step="0.1" required value="{{ request.form.get('luas', '') }}">
+
+      <label for="daya">Daya Listrik (VA)</label>
+      <input type="number" name="daya" id="daya" required value="{{ request.form.get('daya', '') }}">
+
+      <label for="alat">Jumlah Peralatan Elektronik</label>
+      <input type="number" name="alat" id="alat" required value="{{ request.form.get('alat', '') }}">
+
+      <label for="pendapatan">Pendapatan Ekonomi (juta)</label>
+      <input type="number" name="pendapatan" id="pendapatan" step="0.1" required value="{{ request.form.get('pendapatan', '') }}">
+
+      <button type="submit">Prediksi</button>
+    </form>
+
+    {% if hasil_biaya %}
+      <div class="result">
+        Hasil Prediksi: <span style="color: green;">{{ hasil_biaya }}</span>
+      </div>
+    {% endif %}
 
     <div class="chart-grid">
       {% for var_name in variable_names %}
@@ -41,59 +110,52 @@
     </div>
 
     <script>
-      // Fungsi untuk membuat plot
       async function createFuzzyChart(variableName) {
-          const ctx = document.getElementById(`chart-${variableName}`).getContext('2d');
+        const ctx = document.getElementById(`chart-${variableName}`).getContext('2d');
+        const response = await fetch(`/api/data/${variableName}`);
+        const data = await response.json();
 
-          // Ambil data dari API Flask kita
-          const response = await fetch(`/api/data/${variableName}`);
-          const data = await response.json();
-
-          new Chart(ctx, {
-              type: 'line', // Semua plot adalah tipe garis
-              data: {
-                  labels: data.labels,
-                  datasets: data.datasets
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: data.labels,
+            datasets: data.datasets
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              title: {
+                display: true,
+                text: data.title,
+                font: { size: 16 }
               },
-              options: {
-                  responsive: true,
-                  plugins: {
-                      title: {
-                          display: true,
-                          text: data.title, // Judul dinamis dari API
-                          font: { size: 16 }
-                      },
-                      legend: {
-                          position: 'top',
-                      }
-                  },
-                  scales: {
-                      y: {
-                          beginAtZero: true,
-                          max: 1, // Sumbu Y dari 0 sampai 1
-                          title: {
-                              display: true,
-                              text: 'Derajat Keanggotaan'
-                          }
-                      },
-                      x: {
-                           title: {
-                              display: true,
-                              text: 'Nilai Universe'
-                          }
-                      }
-                  }
+              legend: {
+                position: 'top'
               }
-          });
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 1,
+                title: {
+                  display: true,
+                  text: 'Derajat Keanggotaan'
+                }
+              },
+              x: {
+                title: {
+                  display: true,
+                  text: 'Nilai Universe'
+                }
+              }
+            }
+          }
+        });
       }
 
-      // Tunggu sampai semua konten halaman dimuat
       document.addEventListener('DOMContentLoaded', () => {
-          // Ambil nama variabel dari template Jinja2 dan panggil fungsi createFuzzyChart untuk masing-masing
-          const variables = {{ variable_names | tojson }};
-          variables.forEach(varName => {
-              createFuzzyChart(varName);
-          });
+        const variables = {{ variable_names | tojson }};
+        variables.forEach(createFuzzyChart);
       });
     </script>
   </body>
